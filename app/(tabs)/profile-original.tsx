@@ -16,15 +16,6 @@ import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
-const weightData = [
-  { date: '4/24', weight: 72 },
-  { date: '5/6', weight: 71.5 },
-  { date: '5/18', weight: 71 },
-  { date: '5/30', weight: 70.5 },
-  { date: '6/11', weight: 70 },
-  { date: '6/22', weight: 69.5 },
-];
-
 export default function ProfileView() {
   const colorScheme = useColorScheme();
   const colors = getColors(colorScheme);
@@ -80,47 +71,6 @@ export default function ProfileView() {
     },
   ];
 
-  const renderWeightChart = () => {
-    const maxWeight = Math.max(...weightData.map(d => d.weight));
-    const minWeight = Math.min(...weightData.map(d => d.weight));
-    const range = maxWeight - minWeight;
-    
-    return (
-      <View style={styles.chartContainer}>
-        <View style={styles.chartArea}>
-          {weightData.map((point, index) => {
-            const height = range > 0 ? ((point.weight - minWeight) / range) * 60 : 30;
-            const x = (index / (weightData.length - 1)) * (width - 120);
-            
-            return (
-              <View
-                key={index}
-                style={[
-                  styles.chartPoint,
-                  {
-                    left: x,
-                    bottom: height,
-                  }
-                ]}
-              />
-            );
-          })}
-          
-          {/* Chart line */}
-          <View style={styles.chartLine} />
-        </View>
-        
-        <View style={styles.chartLabels}>
-          {weightData.map((point, index) => (
-            <Text key={index} style={styles.chartLabel}>
-              {point.date}
-            </Text>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -172,11 +122,11 @@ export default function ProfileView() {
           </View>
         </View>
 
-        {/* Metrics Section */}
+        {/* Metrics Section - Simplified without graph */}
         <View style={styles.metricsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Metrics</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/metrics')}>
               <Text style={styles.viewMoreText}>View more</Text>
             </TouchableOpacity>
           </View>
@@ -191,7 +141,31 @@ export default function ProfileView() {
               </Text>
             </View>
             
-            {renderWeightChart()}
+            {/* Simple weight summary instead of graph */}
+            <View style={styles.weightSummary}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Current</Text>
+                <Text style={styles.summaryValue}>{currentWeight} kg</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Goal</Text>
+                <Text style={styles.summaryValue}>{goalWeight} kg</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Progress</Text>
+                <Text style={[styles.summaryValue, { color: colors.primary }]}>
+                  {currentWeight > goalWeight ? '-' : '+'}{Math.abs(currentWeight - goalWeight).toFixed(1)} kg
+                </Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.viewDetailsButton}
+              onPress={() => router.push('/metrics/weight')}
+            >
+              <Text style={styles.viewDetailsText}>View detailed chart</Text>
+              <ChevronRight size={16} color={colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -387,39 +361,45 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 4,
   },
-  chartContainer: {
-    height: 100,
-  },
-  chartArea: {
-    height: 80,
-    position: 'relative',
-    marginBottom: 8,
-  },
-  chartPoint: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 3,
-    transform: [{ translateX: -3 }, { translateY: 3 }],
-  },
-  chartLine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-  },
-  chartLabels: {
+  weightSummary: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 3,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
   },
-  chartLabel: {
-    fontFamily: 'Inter-Regular',
-    fontSize: 10,
-    color: colors.textTertiary,
+  summaryItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryLabel: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 16,
+    color: colors.text,
+  },
+  viewDetailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  viewDetailsText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 14,
+    color: colors.primary,
+    marginRight: 8,
   },
   menuSection: {
     paddingHorizontal: 20,
