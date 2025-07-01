@@ -15,10 +15,13 @@ import {
   UtensilsCrossed,
   TrendingUp,
   Calendar,
-  X
+  X,
+  Flame,
+  Clock
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
+import { useUserStats } from '@/contexts/UserStatsContext';
 import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -27,11 +30,19 @@ export default function TodayClientView() {
   const colorScheme = useColorScheme();
   const colors = getColors(colorScheme);
   const styles = createStyles(colors);
+  const { 
+    streakDays, 
+    trainingMinutes, 
+    getWeeklyTrainingMinutes,
+    addWorkoutSession 
+  } = useUserStats();
 
   const [showMissedWorkout, setShowMissedWorkout] = useState(true);
   const [steps, setSteps] = useState(2847);
   const [stepGoal] = useState(10000);
   const [userName] = useState('Vinay');
+
+  const weeklyMinutes = getWeeklyTrainingMinutes();
 
   const getCurrentDate = () => {
     const date = new Date();
@@ -53,6 +64,17 @@ export default function TodayClientView() {
 
   const handleFabPress = () => {
     router.push('/activities');
+  };
+
+  // Demo function to complete a workout
+  const handleCompleteWorkout = async () => {
+    await addWorkoutSession({
+      date: new Date().toISOString(),
+      duration: 30,
+      type: 'Quick Workout',
+      completed: true,
+    });
+    setShowMissedWorkout(false);
   };
 
   return (
@@ -81,6 +103,55 @@ export default function TodayClientView() {
           </View>
         </LinearGradient>
 
+        {/* Streak & Training Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: `${colors.warning}15` }]}>
+              <Flame size={20} color={colors.warning} />
+            </View>
+            <Text style={styles.statNumber}>{streakDays}</Text>
+            <Text style={styles.statLabel}>Streak Days</Text>
+          </View>
+          
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: `${colors.primary}15` }]}>
+              <Clock size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.statNumber}>{weeklyMinutes}</Text>
+            <Text style={styles.statLabel}>This Week</Text>
+            <Text style={styles.statSubLabel}>minutes</Text>
+          </View>
+        </View>
+
+        {/* Streak Achievement */}
+        {streakDays > 0 && (
+          <View style={styles.achievementCard}>
+            <LinearGradient
+              colors={colorScheme === 'dark' ? ['#F59E0B', '#EF4444'] : ['#FEE140', '#FA709A']}
+              style={styles.achievementGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.achievementContent}>
+                <View style={styles.achievementIcon}>
+                  <Flame size={24} color="#FFFFFF" />
+                </View>
+                <View style={styles.achievementInfo}>
+                  <Text style={styles.achievementTitle}>
+                    {streakDays === 1 ? 'Great Start!' : `${streakDays} Day Streak!`}
+                  </Text>
+                  <Text style={styles.achievementMessage}>
+                    {streakDays === 1 
+                      ? 'You\'ve started your fitness journey!' 
+                      : `Keep it up! You're on fire! 🔥`
+                    }
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+        )}
+
         {/* Missed Workout Alert */}
         {showMissedWorkout && (
           <View style={styles.alertCard}>
@@ -98,6 +169,19 @@ export default function TodayClientView() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Quick Workout Button */}
+        <TouchableOpacity style={styles.quickWorkoutButton} onPress={handleCompleteWorkout}>
+          <LinearGradient
+            colors={colorScheme === 'dark' ? ['#10B981', '#059669'] : ['#34D399', '#10B981']}
+            style={styles.quickWorkoutGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text style={styles.quickWorkoutText}>Complete Quick Workout</Text>
+            <Text style={styles.quickWorkoutSubtext}>Boost your streak!</Text>
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Steps Tracker */}
         <View style={styles.card}>
@@ -242,6 +326,111 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: '#FFFFFF',
     lineHeight: 24,
   },
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statNumber: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  statSubLabel: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 10,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+  achievementCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  achievementGradient: {
+    padding: 16,
+  },
+  achievementContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  achievementIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  achievementInfo: {
+    flex: 1,
+  },
+  achievementTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  achievementMessage: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 18,
+  },
+  quickWorkoutButton: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  quickWorkoutGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  quickWorkoutText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  quickWorkoutSubtext: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
   alertCard: {
     backgroundColor: colors.surface,
     marginHorizontal: 20,
@@ -371,17 +560,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   statItem: {
     alignItems: 'center',
     flex: 1,
-  },
-  statNumber: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 24,
-    color: colors.text,
-  },
-  statLabel: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
   },
   fab: {
     position: 'absolute',

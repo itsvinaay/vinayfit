@@ -8,10 +8,11 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, Clock, Droplets, TrendingUp, Calendar, Camera, ChartBar as BarChart3, Target, ChevronRight, Activity, LogOut } from 'lucide-react-native';
+import { User, Settings, Clock, Droplets, TrendingUp, Calendar, Camera, ChartBar as BarChart3, Target, ChevronRight, Activity, LogOut, Flame, Trophy } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
 import { useUserRole } from '@/contexts/UserContext';
+import { useUserStats } from '@/contexts/UserStatsContext';
 import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -21,16 +22,36 @@ export default function ProfileView() {
   const colors = getColors(colorScheme);
   const styles = createStyles(colors);
   const { userRole, userName, setUserRole } = useUserRole();
+  const { 
+    streakDays, 
+    trainingMinutes, 
+    getWeeklyTrainingMinutes, 
+    getMonthlyTrainingMinutes,
+    getLongestStreak,
+    addWorkoutSession 
+  } = useUserStats();
 
   const [userInitials] = useState('VD');
-  const [trainingMinutes] = useState(184);
-  const [streakDays] = useState(0);
   const [currentWeight] = useState(69.5);
   const [goalWeight] = useState(68);
+
+  const weeklyMinutes = getWeeklyTrainingMinutes();
+  const monthlyMinutes = getMonthlyTrainingMinutes();
+  const longestStreak = getLongestStreak();
 
   const handleLogout = () => {
     setUserRole(null);
     router.replace('/(auth)/login');
+  };
+
+  // Demo function to add a workout session
+  const handleAddDemoWorkout = async () => {
+    await addWorkoutSession({
+      date: new Date().toISOString(),
+      duration: 45,
+      type: 'Strength Training',
+      completed: true,
+    });
   };
 
   const menuItems = [
@@ -61,6 +82,13 @@ export default function ProfileView() {
       icon: TrendingUp,
       color: colors.error,
       onPress: () => {},
+    },
+    {
+      id: 'demo-workout',
+      title: 'Add Demo Workout',
+      icon: Trophy,
+      color: colors.info,
+      onPress: handleAddDemoWorkout,
     },
     {
       id: 'logout',
@@ -103,24 +131,76 @@ export default function ProfileView() {
           </View>
         </View>
 
-        {/* Stats Cards */}
+        {/* Enhanced Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: `${colors.primary}15` }]}>
               <Clock size={20} color={colors.primary} />
             </View>
             <Text style={styles.statNumber}>{trainingMinutes}</Text>
-            <Text style={styles.statLabel}>Training min</Text>
+            <Text style={styles.statLabel}>Total Training</Text>
+            <Text style={styles.statSubLabel}>minutes</Text>
           </View>
           
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: `${colors.info}15` }]}>
-              <Droplets size={20} color={colors.info} />
+            <View style={[styles.statIcon, { backgroundColor: `${colors.warning}15` }]}>
+              <Flame size={20} color={colors.warning} />
             </View>
             <Text style={styles.statNumber}>{streakDays}</Text>
-            <Text style={styles.statLabel}>Streak days</Text>
+            <Text style={styles.statLabel}>Current Streak</Text>
+            <Text style={styles.statSubLabel}>days</Text>
           </View>
         </View>
+
+        {/* Weekly/Monthly Stats */}
+        <View style={styles.timeStatsContainer}>
+          <View style={styles.timeStatCard}>
+            <Text style={styles.timeStatNumber}>{weeklyMinutes}</Text>
+            <Text style={styles.timeStatLabel}>This Week</Text>
+            <Text style={styles.timeStatUnit}>minutes</Text>
+          </View>
+          
+          <View style={styles.timeStatCard}>
+            <Text style={styles.timeStatNumber}>{monthlyMinutes}</Text>
+            <Text style={styles.timeStatLabel}>This Month</Text>
+            <Text style={styles.timeStatUnit}>minutes</Text>
+          </View>
+          
+          <View style={styles.timeStatCard}>
+            <Text style={styles.timeStatNumber}>{longestStreak}</Text>
+            <Text style={styles.timeStatLabel}>Best Streak</Text>
+            <Text style={styles.timeStatUnit}>days</Text>
+          </View>
+        </View>
+
+        {/* Streak Achievement Card */}
+        {streakDays > 0 && (
+          <View style={styles.achievementCard}>
+            <LinearGradient
+              colors={colorScheme === 'dark' ? ['#F59E0B', '#EF4444'] : ['#FEE140', '#FA709A']}
+              style={styles.achievementGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.achievementContent}>
+                <View style={styles.achievementIcon}>
+                  <Flame size={24} color="#FFFFFF" />
+                </View>
+                <View style={styles.achievementInfo}>
+                  <Text style={styles.achievementTitle}>
+                    {streakDays === 1 ? 'Great Start!' : `${streakDays} Day Streak!`}
+                  </Text>
+                  <Text style={styles.achievementMessage}>
+                    {streakDays === 1 
+                      ? 'You\'ve started your fitness journey!' 
+                      : `Keep it up! You're on fire! 🔥`
+                    }
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
+        )}
 
         {/* Metrics Section - Simplified without graph */}
         <View style={styles.metricsSection}>
@@ -270,7 +350,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 16,
     gap: 16,
   },
   statCard: {
@@ -306,6 +386,83 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontFamily: 'Inter-Medium',
     fontSize: 12,
     color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  statSubLabel: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 10,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+  timeStatsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 12,
+  },
+  timeStatCard: {
+    flex: 1,
+    backgroundColor: colors.surfaceSecondary,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  timeStatNumber: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  timeStatLabel: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 10,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  timeStatUnit: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 9,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+  achievementCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  achievementGradient: {
+    padding: 16,
+  },
+  achievementContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  achievementIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  achievementInfo: {
+    flex: 1,
+  },
+  achievementTitle: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  achievementMessage: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 18,
   },
   metricsSection: {
     paddingHorizontal: 20,
