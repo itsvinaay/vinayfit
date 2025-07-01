@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { SplashScreen } from 'expo-router';
 import { UserProvider } from '@/contexts/UserContext';
+import { UserStatsProvider } from '@/contexts/UserStatsContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,12 +37,14 @@ export default function RootLayout() {
 
   return (
     <UserProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="dark" />
+      <UserStatsProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="dark" />
+      </UserStatsProvider>
     </UserProvider>
   );
 }
