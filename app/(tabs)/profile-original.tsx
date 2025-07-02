@@ -29,7 +29,7 @@ const metricsData = [
     color: '#3B82F6',
     gradient: ['#3B82F6', '#1D4ED8'],
     gradientDark: ['#60A5FA', '#3B82F6'],
-    data: [68.2, 69.1, 68.8, 69.5, 69.2, 69.5],
+    data: [72.1, 71.8, 71.2, 70.8, 70.1, 69.5], // Gradual weight loss
     goal: 68.0,
     chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
@@ -44,7 +44,7 @@ const metricsData = [
     color: '#10B981',
     gradient: ['#10B981', '#059669'],
     gradientDark: ['#34D399', '#10B981'],
-    data: [35.2, 35.8, 36.0, 36.2, 36.3, 36.5],
+    data: [35.2, 35.4, 35.8, 36.0, 36.2, 36.5], // Steady muscle growth
     goal: 37.0,
     chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
@@ -59,7 +59,7 @@ const metricsData = [
     color: '#F59E0B',
     gradient: ['#F59E0B', '#D97706'],
     gradientDark: ['#FBBF24', '#F59E0B'],
-    data: [16.1, 15.8, 15.6, 15.4, 15.3, 15.2],
+    data: [16.8, 16.4, 16.0, 15.7, 15.4, 15.2], // Consistent fat loss
     goal: 14.0,
     chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
@@ -74,7 +74,7 @@ const metricsData = [
     color: '#8B5CF6',
     gradient: ['#8B5CF6', '#7C3AED'],
     gradientDark: ['#A78BFA', '#8B5CF6'],
-    data: [41.5, 41.7, 41.9, 42.0, 42.1, 42.2],
+    data: [41.1, 41.3, 41.6, 41.8, 42.0, 42.2], // Shoulder development
     goal: 43.0,
     chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
@@ -89,7 +89,7 @@ const metricsData = [
     color: '#EF4444',
     gradient: ['#EF4444', '#DC2626'],
     gradientDark: ['#F87171', '#EF4444'],
-    data: [32.8, 32.6, 32.4, 32.3, 32.2, 32.1],
+    data: [33.2, 32.9, 32.7, 32.5, 32.3, 32.1], // Waist reduction
     goal: 31.0,
     chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
@@ -207,11 +207,27 @@ export default function ProfileView() {
     const minValue = Math.min(...data);
     const range = maxValue - minValue || 1;
     const chartWidth = width - 120;
-    const chartHeight = 80;
+    const chartHeight = 60;
 
     return (
       <View style={styles.lineChartContainer}>
         <View style={[styles.lineChart, { width: chartWidth, height: chartHeight }]}>
+          {/* Chart background grid */}
+          <View style={styles.chartGrid}>
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.gridLine,
+                  {
+                    top: ratio * chartHeight,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  }
+                ]}
+              />
+            ))}
+          </View>
+
           {/* Chart lines */}
           {data.map((value, index) => {
             if (index === data.length - 1) return null;
@@ -234,8 +250,10 @@ export default function ProfileView() {
                     left: x1,
                     top: y1,
                     width: lineLength,
+                    height: 2,
                     transform: [{ rotate: `${angle}deg` }],
                     backgroundColor: color,
+                    transformOrigin: 'left center',
                   }
                 ]}
               />
@@ -263,6 +281,22 @@ export default function ProfileView() {
               />
             );
           })}
+
+          {/* Current value indicator */}
+          <View
+            style={[
+              styles.currentValueIndicator,
+              {
+                position: 'absolute',
+                left: chartWidth - 3,
+                top: chartHeight - ((data[data.length - 1] - minValue) / range) * chartHeight - 8,
+              }
+            ]}
+          >
+            <Text style={styles.currentValueText}>
+              {data[data.length - 1]}
+            </Text>
+          </View>
         </View>
         
         {/* Chart labels */}
@@ -730,7 +764,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   metricGradient: {
     padding: 20,
-    minHeight: 280,
+    minHeight: 300,
   },
   metricHeader: {
     flexDirection: 'row',
@@ -806,10 +840,23 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   lineChart: {
     position: 'relative',
-    marginBottom: 8,
+    marginBottom: 12,
+    paddingVertical: 8,
+  },
+  chartGrid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  gridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
   },
   chartLine: {
-    height: 2,
     borderRadius: 1,
   },
   dataPoint: {
@@ -817,6 +864,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     height: 6,
     borderRadius: 3,
     borderWidth: 2,
+  },
+  currentValueIndicator: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  currentValueText: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 10,
+    color: '#000000',
   },
   chartLabels: {
     flexDirection: 'row',
