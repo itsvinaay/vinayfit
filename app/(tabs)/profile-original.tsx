@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, Clock, Droplets, TrendingUp, Calendar, Camera, ChartBar as BarChart3, Target, ChevronRight, Activity, LogOut, Flame, Trophy } from 'lucide-react-native';
+import { User, Settings, Clock, Droplets, TrendingUp, Calendar, Camera, ChartBar as BarChart3, Target, ChevronRight, Activity, LogOut, Flame, Trophy, Weight, Ruler } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '@/hooks/useColorScheme';
 import { useUserRole } from '@/contexts/UserContext';
@@ -16,6 +16,51 @@ import { useUserStats } from '@/contexts/UserStatsContext';
 import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
+
+const metricsData = [
+  {
+    id: 'weight',
+    title: 'Weight',
+    value: 69.5,
+    unit: 'kg',
+    change: -1.2,
+    changeLabel: 'vs last week',
+    icon: Weight,
+    color: '#3B82F6',
+    gradient: ['#3B82F6', '#1D4ED8'],
+    gradientDark: ['#60A5FA', '#3B82F6'],
+    data: [68.2, 69.1, 68.8, 69.5, 69.2, 69.5],
+    goal: 68.0,
+  },
+  {
+    id: 'chest',
+    title: 'Chest',
+    value: 36.5,
+    unit: 'in',
+    change: +0.8,
+    changeLabel: 'vs last month',
+    icon: Ruler,
+    color: '#10B981',
+    gradient: ['#10B981', '#059669'],
+    gradientDark: ['#34D399', '#10B981'],
+    data: [35.2, 35.8, 36.0, 36.2, 36.3, 36.5],
+    goal: 37.0,
+  },
+  {
+    id: 'bodyfat',
+    title: 'Body Fat',
+    value: 15.2,
+    unit: '%',
+    change: -0.5,
+    changeLabel: 'vs last month',
+    icon: TrendingUp,
+    color: '#F59E0B',
+    gradient: ['#F59E0B', '#D97706'],
+    gradientDark: ['#FBBF24', '#F59E0B'],
+    data: [16.1, 15.8, 15.6, 15.4, 15.3, 15.2],
+    goal: 14.0,
+  },
+];
 
 export default function ProfileView() {
   const colorScheme = useColorScheme();
@@ -32,9 +77,6 @@ export default function ProfileView() {
   } = useUserStats();
 
   const [userInitials] = useState('VD');
-  const [currentWeight] = useState(69.5);
-  const [goalWeight] = useState(68);
-
   const weeklyMinutes = getWeeklyTrainingMinutes();
   const monthlyMinutes = getMonthlyTrainingMinutes();
   const longestStreak = getLongestStreak();
@@ -98,6 +140,104 @@ export default function ProfileView() {
       onPress: handleLogout,
     },
   ];
+
+  const renderMiniChart = (data: number[], color: string) => {
+    const maxValue = Math.max(...data);
+    const minValue = Math.min(...data);
+    const range = maxValue - minValue || 1;
+
+    return (
+      <View style={styles.miniChart}>
+        {data.map((value, index) => {
+          const height = ((value - minValue) / range) * 20 + 4;
+          return (
+            <View
+              key={index}
+              style={[
+                styles.chartBar,
+                {
+                  height,
+                  backgroundColor: color,
+                  opacity: index === data.length - 1 ? 1 : 0.6,
+                }
+              ]}
+            />
+          );
+        })}
+      </View>
+    );
+  };
+
+  const renderMetricCard = (metric: typeof metricsData[0]) => {
+    const IconComponent = metric.icon;
+    const isPositiveChange = metric.change > 0;
+    const changeColor = metric.id === 'bodyfat' 
+      ? (metric.change < 0 ? colors.success : colors.error) // For body fat, decrease is good
+      : (metric.change > 0 ? colors.success : colors.error); // For others, increase is good
+
+    const progressToGoal = metric.id === 'bodyfat' 
+      ? Math.max(0, Math.min(100, ((16 - metric.value) / (16 - metric.goal)) * 100)) // For body fat, progress towards lower value
+      : Math.max(0, Math.min(100, (metric.value / metric.goal) * 100)); // For others, progress towards higher value
+
+    return (
+      <View key={metric.id} style={styles.metricCard}>
+        <LinearGradient
+          colors={colorScheme === 'dark' ? metric.gradientDark : metric.gradient}
+          style={styles.metricGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.metricHeader}>
+            <View style={styles.metricIconContainer}>
+              <IconComponent size={20} color="rgba(255, 255, 255, 0.9)" />
+            </View>
+            <TouchableOpacity 
+              style={styles.metricMoreButton}
+              onPress={() => router.push(`/metrics/${metric.id}`)}
+            >
+              <ChevronRight size={16} color="rgba(255, 255, 255, 0.7)" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.metricContent}>
+            <Text style={styles.metricTitle}>{metric.title}</Text>
+            
+            <View style={styles.metricValueContainer}>
+              <Text style={styles.metricValue}>
+                {metric.value}
+              </Text>
+              <Text style={styles.metricUnit}>{metric.unit}</Text>
+            </View>
+
+            <View style={styles.metricChange}>
+              <Text style={[styles.metricChangeText, { color: 'rgba(255, 255, 255, 0.9)' }]}>
+                {isPositiveChange ? '+' : ''}{metric.change} {metric.changeLabel}
+              </Text>
+            </View>
+
+            {/* Mini Chart */}
+            <View style={styles.chartContainer}>
+              {renderMiniChart(metric.data, 'rgba(255, 255, 255, 0.8)')}
+            </View>
+
+            {/* Goal Progress */}
+            <View style={styles.goalContainer}>
+              <Text style={styles.goalLabel}>Goal: {metric.goal} {metric.unit}</Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${progressToGoal}%` }
+                  ]} 
+                />
+              </View>
+              <Text style={styles.progressText}>{Math.round(progressToGoal)}%</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -202,7 +342,7 @@ export default function ProfileView() {
           </View>
         )}
 
-        {/* Metrics Section - Simplified without graph */}
+        {/* Swipable Metrics Section */}
         <View style={styles.metricsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Metrics</Text>
@@ -211,42 +351,17 @@ export default function ProfileView() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.metricsCard}>
-            <Text style={styles.metricsTitle}>WEIGHT (KG)</Text>
-            
-            <View style={styles.weightInfo}>
-              <Text style={styles.currentWeight}>{currentWeight}</Text>
-              <Text style={styles.weightProgress}>
-                {currentWeight > goalWeight ? `${(currentWeight - goalWeight).toFixed(1)} kg to goal` : 'Goal reached!'}
-              </Text>
-            </View>
-            
-            {/* Simple weight summary instead of graph */}
-            <View style={styles.weightSummary}>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Current</Text>
-                <Text style={styles.summaryValue}>{currentWeight} kg</Text>
-              </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Goal</Text>
-                <Text style={styles.summaryValue}>{goalWeight} kg</Text>
-              </View>
-              <View style={styles.summaryItem}>
-                <Text style={styles.summaryLabel}>Progress</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary }]}>
-                  {currentWeight > goalWeight ? '-' : '+'}{Math.abs(currentWeight - goalWeight).toFixed(1)} kg
-                </Text>
-              </View>
-            </View>
-            
-            <TouchableOpacity 
-              style={styles.viewDetailsButton}
-              onPress={() => router.push('/metrics/weight')}
-            >
-              <Text style={styles.viewDetailsText}>View detailed chart</Text>
-              <ChevronRight size={16} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.metricsScrollView}
+            contentContainerStyle={styles.metricsScrollContent}
+            snapToInterval={width - 60}
+            decelerationRate="fast"
+            pagingEnabled={false}
+          >
+            {metricsData.map(renderMetricCard)}
+          </ScrollView>
         </View>
 
         {/* Menu Items */}
@@ -465,14 +580,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     lineHeight: 18,
   },
   metricsSection: {
-    paddingHorizontal: 20,
     marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontFamily: 'Inter-SemiBold',
@@ -484,79 +599,124 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     color: colors.primary,
   },
-  metricsCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 20,
+  metricsScrollView: {
+    paddingLeft: 20,
+  },
+  metricsScrollContent: {
+    paddingRight: 20,
+  },
+  metricCard: {
+    width: width - 80,
+    marginRight: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
     shadowColor: colors.shadow,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
     shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  metricsTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 12,
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
-    marginBottom: 16,
+  metricGradient: {
+    padding: 20,
+    minHeight: 200,
   },
-  weightInfo: {
-    marginBottom: 20,
-  },
-  currentWeight: {
-    fontFamily: 'Inter-Bold',
-    fontSize: 32,
-    color: colors.text,
-  },
-  weightProgress: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  weightSummary: {
+  metricHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 8,
-    padding: 16,
+    alignItems: 'center',
     marginBottom: 16,
   },
-  summaryItem: {
+  metricIconContainer: {
+    width: 36,
+    height: 36,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 18,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  metricMoreButton: {
+    width: 28,
+    height: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  metricContent: {
     flex: 1,
   },
-  summaryLabel: {
-    fontFamily: 'Inter-Medium',
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  summaryValue: {
+  metricTitle: {
     fontFamily: 'Inter-SemiBold',
     fontSize: 16,
-    color: colors.text,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 8,
   },
-  viewDetailsButton: {
+  metricValueContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+    alignItems: 'baseline',
+    marginBottom: 8,
   },
-  viewDetailsText: {
+  metricValue: {
+    fontFamily: 'Inter-Bold',
+    fontSize: 32,
+    color: '#FFFFFF',
+  },
+  metricUnit: {
     fontFamily: 'Inter-SemiBold',
-    fontSize: 14,
-    color: colors.primary,
-    marginRight: 8,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginLeft: 4,
+  },
+  metricChange: {
+    marginBottom: 16,
+  },
+  metricChangeText: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  chartContainer: {
+    marginBottom: 16,
+  },
+  miniChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 24,
+    gap: 3,
+  },
+  chartBar: {
+    width: 4,
+    borderRadius: 2,
+    minHeight: 4,
+  },
+  goalContainer: {
+    marginTop: 'auto',
+  },
+  goalLabel: {
+    fontFamily: 'Inter-Medium',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 2,
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 2,
+  },
+  progressText: {
+    fontFamily: 'Inter-SemiBold',
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'right',
   },
   menuSection: {
     paddingHorizontal: 20,
