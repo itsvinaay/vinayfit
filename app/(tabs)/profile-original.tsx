@@ -31,6 +31,7 @@ const metricsData = [
     gradientDark: ['#60A5FA', '#3B82F6'],
     data: [68.2, 69.1, 68.8, 69.5, 69.2, 69.5],
     goal: 68.0,
+    chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
   {
     id: 'chest',
@@ -45,6 +46,7 @@ const metricsData = [
     gradientDark: ['#34D399', '#10B981'],
     data: [35.2, 35.8, 36.0, 36.2, 36.3, 36.5],
     goal: 37.0,
+    chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
   {
     id: 'bodyfat',
@@ -59,6 +61,37 @@ const metricsData = [
     gradientDark: ['#FBBF24', '#F59E0B'],
     data: [16.1, 15.8, 15.6, 15.4, 15.3, 15.2],
     goal: 14.0,
+    chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+  },
+  {
+    id: 'shoulders',
+    title: 'Shoulders',
+    value: 42.2,
+    unit: 'in',
+    change: +0.3,
+    changeLabel: 'vs last month',
+    icon: Ruler,
+    color: '#8B5CF6',
+    gradient: ['#8B5CF6', '#7C3AED'],
+    gradientDark: ['#A78BFA', '#8B5CF6'],
+    data: [41.5, 41.7, 41.9, 42.0, 42.1, 42.2],
+    goal: 43.0,
+    chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+  },
+  {
+    id: 'waist',
+    title: 'Waist',
+    value: 32.1,
+    unit: 'in',
+    change: -0.4,
+    changeLabel: 'vs last month',
+    icon: Ruler,
+    color: '#EF4444',
+    gradient: ['#EF4444', '#DC2626'],
+    gradientDark: ['#F87171', '#EF4444'],
+    data: [32.8, 32.6, 32.4, 32.3, 32.2, 32.1],
+    goal: 31.0,
+    chartLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   },
 ];
 
@@ -145,6 +178,7 @@ export default function ProfileView() {
     const maxValue = Math.max(...data);
     const minValue = Math.min(...data);
     const range = maxValue - minValue || 1;
+    const padding = range * 0.1;
 
     return (
       <View style={styles.miniChart}>
@@ -168,15 +202,90 @@ export default function ProfileView() {
     );
   };
 
+  const renderLineChart = (data: number[], color: string, labels: string[]) => {
+    const maxValue = Math.max(...data);
+    const minValue = Math.min(...data);
+    const range = maxValue - minValue || 1;
+    const chartWidth = width - 120;
+    const chartHeight = 80;
+
+    return (
+      <View style={styles.lineChartContainer}>
+        <View style={[styles.lineChart, { width: chartWidth, height: chartHeight }]}>
+          {/* Chart lines */}
+          {data.map((value, index) => {
+            if (index === data.length - 1) return null;
+            
+            const x1 = (index / (data.length - 1)) * chartWidth;
+            const y1 = chartHeight - ((value - minValue) / range) * chartHeight;
+            const x2 = ((index + 1) / (data.length - 1)) * chartWidth;
+            const y2 = chartHeight - ((data[index + 1] - minValue) / range) * chartHeight;
+            
+            const lineLength = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+            
+            return (
+              <View
+                key={index}
+                style={[
+                  styles.chartLine,
+                  {
+                    position: 'absolute',
+                    left: x1,
+                    top: y1,
+                    width: lineLength,
+                    transform: [{ rotate: `${angle}deg` }],
+                    backgroundColor: color,
+                  }
+                ]}
+              />
+            );
+          })}
+          
+          {/* Data points */}
+          {data.map((value, index) => {
+            const x = (index / (data.length - 1)) * chartWidth;
+            const y = chartHeight - ((value - minValue) / range) * chartHeight;
+            
+            return (
+              <View
+                key={index}
+                style={[
+                  styles.dataPoint,
+                  {
+                    position: 'absolute',
+                    left: x - 3,
+                    top: y - 3,
+                    backgroundColor: color,
+                    borderColor: 'rgba(255, 255, 255, 0.9)',
+                  }
+                ]}
+              />
+            );
+          })}
+        </View>
+        
+        {/* Chart labels */}
+        <View style={styles.chartLabels}>
+          {labels.map((label, index) => (
+            <Text key={index} style={styles.chartLabel}>
+              {label}
+            </Text>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   const renderMetricCard = (metric: typeof metricsData[0]) => {
     const IconComponent = metric.icon;
     const isPositiveChange = metric.change > 0;
-    const changeColor = metric.id === 'bodyfat' 
-      ? (metric.change < 0 ? colors.success : colors.error) // For body fat, decrease is good
+    const changeColor = metric.id === 'bodyfat' || metric.id === 'waist'
+      ? (metric.change < 0 ? colors.success : colors.error) // For body fat and waist, decrease is good
       : (metric.change > 0 ? colors.success : colors.error); // For others, increase is good
 
-    const progressToGoal = metric.id === 'bodyfat' 
-      ? Math.max(0, Math.min(100, ((16 - metric.value) / (16 - metric.goal)) * 100)) // For body fat, progress towards lower value
+    const progressToGoal = metric.id === 'bodyfat' || metric.id === 'waist'
+      ? Math.max(0, Math.min(100, ((metric.data[0] - metric.value) / (metric.data[0] - metric.goal)) * 100)) // For body fat/waist, progress towards lower value
       : Math.max(0, Math.min(100, (metric.value / metric.goal) * 100)); // For others, progress towards higher value
 
     return (
@@ -215,9 +324,9 @@ export default function ProfileView() {
               </Text>
             </View>
 
-            {/* Mini Chart */}
+            {/* Line Chart */}
             <View style={styles.chartContainer}>
-              {renderMiniChart(metric.data, 'rgba(255, 255, 255, 0.8)')}
+              {renderLineChart(metric.data, 'rgba(255, 255, 255, 0.8)', metric.chartLabels)}
             </View>
 
             {/* Goal Progress */}
@@ -345,9 +454,9 @@ export default function ProfileView() {
         {/* Swipable Metrics Section */}
         <View style={styles.metricsSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Metrics</Text>
+            <Text style={styles.sectionTitle}>Body Metrics</Text>
             <TouchableOpacity onPress={() => router.push('/metrics')}>
-              <Text style={styles.viewMoreText}>View more</Text>
+              <Text style={styles.viewMoreText}>View all</Text>
             </TouchableOpacity>
           </View>
           
@@ -621,7 +730,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   metricGradient: {
     padding: 20,
-    minHeight: 200,
+    minHeight: 280,
   },
   metricHeader: {
     flexDirection: 'row',
@@ -691,6 +800,33 @@ const createStyles = (colors: any) => StyleSheet.create({
     width: 4,
     borderRadius: 2,
     minHeight: 4,
+  },
+  lineChartContainer: {
+    marginVertical: 8,
+  },
+  lineChart: {
+    position: 'relative',
+    marginBottom: 8,
+  },
+  chartLine: {
+    height: 2,
+    borderRadius: 1,
+  },
+  dataPoint: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    borderWidth: 2,
+  },
+  chartLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  chartLabel: {
+    fontFamily: 'Inter-Regular',
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.6)',
   },
   goalContainer: {
     marginTop: 'auto',
