@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
@@ -23,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme, getColors } from '../../hooks/useColorScheme';
 import { useUserStats } from '@/contexts/UserStatsContext';
 import { router } from 'expo-router';
+import PullToRefresh from '@/components/ui/PullToRefresh';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +41,7 @@ export default function TodayClientView() {
   const [steps, setSteps] = useState(2847);
   const [stepGoal] = useState(10000);
   const [userName] = useState('Vinay');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const weeklyMinutes = getWeeklyTrainingMinutes();
 
@@ -77,9 +78,23 @@ export default function TodayClientView() {
     setShowMissedWorkout(false);
   };
 
+  // Pull to refresh handler
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    
+    // Simulate data refresh
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Update steps with random increment
+    const newSteps = steps + Math.floor(Math.random() * 500) + 100;
+    setSteps(Math.min(newSteps, stepGoal));
+    
+    setIsRefreshing(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <PullToRefresh onRefresh={handleRefresh} refreshing={isRefreshing}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.dateText}>{getCurrentDate()}</Text>
@@ -269,7 +284,7 @@ export default function TodayClientView() {
 
         {/* Spacing for FAB */}
         <View style={{ height: 100 }} />
-      </ScrollView>
+      </PullToRefresh>
 
       {/* Floating Action Button */}
       <TouchableOpacity style={styles.fab} onPress={handleFabPress}>
@@ -283,9 +298,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
   },
   header: {
     paddingHorizontal: 20,
